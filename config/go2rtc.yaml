@@ -1,0 +1,7 @@
+# 실제 카메라용 설정. CAMERA_RTSP_URL 환경 변수에 카메라 RTSP 주소를 넣어 실행한다.
+api:
+  listen: "127.0.0.1:1984"
+webrtc:
+  listen: ":8555"
+streams:
+  camera: ${CAMERA_RTSP_URL}
