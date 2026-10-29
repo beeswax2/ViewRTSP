@@ -54,3 +54,4 @@ next-env.d.ts
 # local relay binary and saved files
 /tools/
 /saved/
+/config/*-state.yaml

@@ -48,6 +48,16 @@ export class StreamRecorder {
     };
   }
 
+  // 첫 키프레임까지 받을 때까지 기다린다. 상시 녹화를 껐다가 녹화를 시작할 때 쓴다.
+  async whenReady(timeoutMs: number) {
+    const until = Date.now() + timeoutMs;
+    while (!this.buffer.ready) {
+      if (Date.now() > until) return false;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return true;
+  }
+
   // 누른 시점에 가장 가까운 앞쪽 키프레임부터 녹화를 시작한다.
   startRecording() {
     const start = this.buffer.keyframeAtOrBefore(Date.now());

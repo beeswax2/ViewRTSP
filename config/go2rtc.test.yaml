@@ -5,4 +5,6 @@ api:
 webrtc:
   listen: ":8555"
 streams:
+  # 설정 메뉴로 소스를 바꿔 보는 시험용 두 번째 영상. 메뉴에 rtsp://127.0.0.1:8554/bars 를 입력한다.
+  bars: exec:ffmpeg -hide_banner -loglevel error -re -f lavfi -i smptebars=size=1280x720:rate=25 -c:v libx264 -preset ultrafast -tune zerolatency -g 25 -pix_fmt yuv420p -f rtsp {output}
   camera: exec:ffmpeg -hide_banner -loglevel error -re -f lavfi -i testsrc2=size=1280x720:rate=25 -/filter:v config/test-overlay.ffscript -c:v libx264 -preset ultrafast -tune zerolatency -g 25 -pix_fmt yuv420p -f rtsp {output}

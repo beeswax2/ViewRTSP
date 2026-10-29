@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export type LiveStatus = "connecting" | "live" | "disconnected";
 
@@ -38,6 +38,8 @@ async function negotiate(pc: RTCPeerConnection) {
 export function useLiveStream() {
   const [status, setStatus] = useState<LiveStatus>("connecting");
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const reconnect = useCallback(() => setAttempt((n) => n + 1), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,7 +84,7 @@ export function useLiveStream() {
       clearTimeout(retry);
       pc?.close();
     };
-  }, []);
+  }, [attempt]);
 
-  return { status, stream };
+  return { status, stream, reconnect };
 }

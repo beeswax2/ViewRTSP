@@ -1,7 +1,7 @@
-# 실제 카메라용 설정. CAMERA_RTSP_URL 환경 변수에 카메라 RTSP 주소를 넣어 실행한다.
+# 실제 카메라용 설정. 카메라 RTSP 주소는 앱의 설정 메뉴에서 입력한다.
+# 메뉴로 저장한 주소는 go2rtc가 첫 번째 -c 파일(config/relay-state.yaml)에 기록하므로,
+# 이 파일은 바뀌지 않는다. 실행은 `bun run relay`를 쓴다.
 api:
   listen: "127.0.0.1:1984"
 webrtc:
   listen: ":8555"
-streams:
-  camera: ${CAMERA_RTSP_URL}
