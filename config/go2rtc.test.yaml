@@ -1,10 +1,13 @@
-# 카메라 없이 개발할 때 쓰는 설정. ffmpeg가 시각이 찍힌 H.264 테스트 영상을 만든다.
+# 카메라 없이 개발할 때 쓰는 설정. ffmpeg가 H.264 테스트 영상을 만든다.
 # 프로젝트 루트에서 실행해야 test-overlay.ffscript 경로가 맞는다.
+# camera 말고 정의한 스트림(clock, bars)은 앱의 설정 메뉴에 시험용 영상으로 나타난다.
 api:
   listen: "127.0.0.1:1984"
 webrtc:
   listen: ":8555"
 streams:
-  # 설정 메뉴로 소스를 바꿔 보는 시험용 두 번째 영상. 메뉴에 rtsp://127.0.0.1:8554/bars 를 입력한다.
+  # 시각이 찍힌 영상. camera의 처음 영상과 같고, 다른 주소로 바꿨다가 돌아올 때 고른다.
+  clock: exec:ffmpeg -hide_banner -loglevel error -re -f lavfi -i testsrc2=size=1280x720:rate=25 -/filter:v config/test-overlay.ffscript -c:v libx264 -preset ultrafast -tune zerolatency -g 25 -pix_fmt yuv420p -f rtsp {output}
+  # 색 막대 영상. 소스가 실제로 바뀌었는지 눈으로 구분하기 쉽다.
   bars: exec:ffmpeg -hide_banner -loglevel error -re -f lavfi -i smptebars=size=1280x720:rate=25 -c:v libx264 -preset ultrafast -tune zerolatency -g 25 -pix_fmt yuv420p -f rtsp {output}
   camera: exec:ffmpeg -hide_banner -loglevel error -re -f lavfi -i testsrc2=size=1280x720:rate=25 -/filter:v config/test-overlay.ffscript -c:v libx264 -preset ultrafast -tune zerolatency -g 25 -pix_fmt yuv420p -f rtsp {output}

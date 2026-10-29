@@ -32,10 +32,26 @@ describe("camera-source route", () => {
     expect((await GET()).status).toBe(502);
   });
 
-  it("returns the relay's masked camera address", async () => {
+  it("returns the relay's masked camera address and no presets when only camera is defined", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      Response.json({ camera: { producers: [{ url: "rtsp://***@10.0.0.5/s1" }] } }),
+      Response.json({ camera: { producers: [{ url: "rtsp://admin:pw@10.0.0.5/s1" }] } }),
     );
-    expect(await (await GET()).json()).toEqual({ url: "rtsp://***@10.0.0.5/s1" });
+    expect(await (await GET()).json()).toEqual({ url: "rtsp://***@10.0.0.5/s1", presets: [] });
+  });
+
+  it("lists the other relay streams as test presets with their rtsp addresses", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({
+        camera: { producers: [{ source: "exec:ffmpeg" }] },
+        clock: { producers: [{ url: "exec:ffmpeg" }] },
+        bars: { producers: [{ url: "exec:ffmpeg" }] },
+      }),
+    );
+    const body = await (await GET()).json();
+    expect(body.url).toBeNull();
+    expect(body.presets).toEqual([
+      { name: "clock", url: "rtsp://127.0.0.1:8554/clock" },
+      { name: "bars", url: "rtsp://127.0.0.1:8554/bars" },
+    ]);
   });
 });

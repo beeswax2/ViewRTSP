@@ -1,16 +1,24 @@
 import { checkCameraSource, maskCameraSource } from "@/lib/camera-source";
-import { RELAY_URL } from "@/lib/relay";
+import { RELAY_URL, relayRtspUrl } from "@/lib/relay";
 
-// 지금 카메라 주소. 계정 비밀번호는 중계 서버가 가려서 돌려준다.
+// 지금 카메라 주소와, 중계 서버에 camera 말고 정의된 시험용 영상의 주소.
+// 계정 비밀번호는 가려서 돌려준다.
 export async function GET() {
   try {
     const res = await fetch(`${RELAY_URL}/api/streams`, { cache: "no-store" });
     // 연결 전에는 url, 연결된 뒤에는 source에 주소가 들어 있다.
-    const streams = (await res.json()) as {
-      camera?: { producers?: { url?: string; source?: string }[] };
-    };
+    const streams = (await res.json()) as Record<
+      string,
+      { producers?: { url?: string; source?: string }[] }
+    >;
     const producer = streams.camera?.producers?.[0];
-    return Response.json({ url: maskCameraSource(producer?.url ?? producer?.source) });
+    const presets = Object.keys(streams)
+      .filter((name) => name !== "camera")
+      .map((name) => ({ name, url: relayRtspUrl(name) }));
+    return Response.json({
+      url: maskCameraSource(producer?.url ?? producer?.source),
+      presets,
+    });
   } catch {
     return Response.json({ error: "중계 서버에 연결할 수 없습니다." }, { status: 502 });
   }
