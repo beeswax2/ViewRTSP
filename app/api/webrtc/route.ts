@@ -1,7 +1,7 @@
+import { RELAY_URL } from "@/lib/relay";
+
 // 브라우저의 WebRTC offer를 중계 서버(go2rtc)로 전달하고 answer를 돌려준다.
 // 카메라 주소는 중계 서버 설정에만 있고 브라우저에는 노출되지 않는다.
-const RELAY_URL = process.env.GO2RTC_URL ?? "http://127.0.0.1:1984";
-
 export async function POST(request: Request) {
   const offer = await request.text();
   try {

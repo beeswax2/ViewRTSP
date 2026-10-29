@@ -58,14 +58,8 @@ export function useLiveStream() {
       const conn = new RTCPeerConnection({ iceServers: [] });
       pc = conn;
       conn.addTransceiver("video", { direction: "recvonly" });
+      // 수신 버퍼는 브라우저 기본값을 쓴다. 0으로 요청하면 내부망에서도 화면이 더 자주 멈췄다.
       conn.ontrack = (event) => {
-        // 재생 지연을 줄이도록 수신 버퍼를 최소로 요청한다. 지원하지 않는 브라우저는 무시한다.
-        const receiver = event.receiver as RTCRtpReceiver & {
-          jitterBufferTarget?: number | null;
-        };
-        try {
-          receiver.jitterBufferTarget = 0;
-        } catch {}
         setStream(event.streams[0] ?? new MediaStream([event.track]));
       };
       conn.onconnectionstatechange = () => {

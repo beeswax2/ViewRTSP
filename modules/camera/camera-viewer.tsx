@@ -5,16 +5,18 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
-import { ClipRing } from "./clip-ring";
-import { captureFrame, createSegmentRecorder, pickVideoFormat } from "./recording";
+import { captureFrame } from "./capture";
 import { saveBlob, type SaveKind } from "./save";
 import { getSaveTarget, setSaveTarget, subscribeSaveTarget } from "./save-target";
+import { StreamRecorder } from "./stream-recorder";
 import { useLiveStream } from "./use-live-stream";
 
 const CLIP_PRE_MS = 5000;
 const CLIP_POST_MS = 5000;
+const VIDEO_EXT = "mp4";
 
 type Notice = { tone: "default" | "destructive"; text: string };
+type Recording = { stop(): Blob };
 
 const STATUS_TEXT = {
   connecting: { title: "카메라에 연결하는 중입니다", body: "잠시만 기다려 주세요." },
@@ -27,8 +29,8 @@ const STATUS_TEXT = {
 export function CameraViewer() {
   const { status, stream } = useLiveStream();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const ringRef = useRef<ClipRing | null>(null);
-  const recorderRef = useRef<ReturnType<typeof createSegmentRecorder> | null>(null);
+  const recorderRef = useRef<StreamRecorder | null>(null);
+  const recordingRef = useRef<Recording | null>(null);
 
   const target = useSyncExternalStore(subscribeSaveTarget, getSaveTarget, () => "device" as const);
   const [recording, setRecording] = useState(false);
@@ -41,19 +43,15 @@ export function CameraViewer() {
     if (videoRef.current) videoRef.current.srcObject = stream;
   }, [stream]);
 
-  // 구간 클립을 위해 영상이 들어오는 동안 직전 구간을 계속 녹화해 둔다.
+  // 저장용 영상은 화면 재생과 별개로 받아 직전 구간을 계속 쌓아 둔다.
   useEffect(() => {
     if (!stream) return;
-    const ring = new ClipRing({
-      create: () => createSegmentRecorder(stream),
-      preMs: CLIP_PRE_MS,
-      postMs: CLIP_POST_MS,
-    });
-    ring.start();
-    ringRef.current = ring;
+    const recorder = new StreamRecorder(CLIP_PRE_MS, CLIP_POST_MS);
+    recorder.start();
+    recorderRef.current = recorder;
     return () => {
-      ring.stop();
-      ringRef.current = null;
+      recorder.stop();
+      recorderRef.current = null;
     };
   }, [stream]);
 
@@ -68,41 +66,52 @@ export function CameraViewer() {
     [target],
   );
 
+  const notReady = () =>
+    setNotice({ tone: "destructive", text: "저장용 영상을 아직 받지 못했습니다. 잠시 뒤 다시 눌러 주세요." });
+
   const capture = async () => {
     if (!videoRef.current) return;
-    await save("image", "png", await captureFrame(videoRef.current));
+    try {
+      await save("image", "png", await captureFrame(videoRef.current));
+    } catch {
+      setNotice({ tone: "destructive", text: "캡처하지 못했습니다. 다시 시도해 주세요." });
+    }
   };
 
   const stopRecording = useCallback(async () => {
-    const recorder = recorderRef.current;
-    if (!recorder) return;
-    recorderRef.current = null;
+    const session = recordingRef.current;
+    if (!session) return;
+    recordingRef.current = null;
     setRecording(false);
-    await save("video", pickVideoFormat().ext, await recorder.stop());
+    await save("video", VIDEO_EXT, session.stop());
   }, [save]);
 
   const toggleRecording = () => {
     if (recording) return void stopRecording();
-    if (!stream) return;
-    recorderRef.current = createSegmentRecorder(stream);
-    setRecording(true);
-    setNotice(null);
+    try {
+      recordingRef.current = recorderRef.current!.startRecording();
+      setRecording(true);
+      setNotice(null);
+    } catch {
+      notReady();
+    }
   };
 
   // 연결이 끊기면 녹화 중이던 영상은 거기까지만 저장한다.
   useEffect(() => {
-    if (!live && recorderRef.current) void stopRecording();
+    if (!live && recordingRef.current) void stopRecording();
   }, [live, stopRecording]);
 
   const clip = async () => {
-    if (!ringRef.current) return;
+    const recorder = recorderRef.current;
+    if (!recorder) return;
     setClipping(true);
-    setNotice({ tone: "default", text: "직후 5초를 녹화한 뒤 저장합니다." });
+    setNotice({ tone: "default", text: "직후 5초를 받은 뒤 저장합니다." });
     try {
-      const { blob } = await ringRef.current.clip();
-      await save("video", pickVideoFormat().ext, blob);
+      const { blob } = await recorder.clip();
+      await save("video", VIDEO_EXT, blob);
     } catch {
-      setNotice({ tone: "destructive", text: "구간 클립을 저장하지 못했습니다." });
+      notReady();
     } finally {
       setClipping(false);
     }
