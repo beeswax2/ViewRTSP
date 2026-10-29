@@ -1,0 +1,1 @@
+%{localtime:%H\:%M\:%S}.%{eif:mod(n,25)*4:d:2}

@@ -50,3 +50,8 @@ next-env.d.ts
 
 # worktree
 .claude/worktrees
+
+# local relay binary and saved files
+/tools/
+/saved/
+/config/*-state.yaml

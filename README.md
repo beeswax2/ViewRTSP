@@ -76,3 +76,14 @@ flowchart LR
 ```
 
 파이프라인 밖에서는 `project-knowledge`, `maintain-project-context`, `add-stack-context`, `build-prototype`, `explain-visually`, `tdd`가 각자의 조건에 따라 켜집니다. `project-knowledge`는 `GLOSSARY.md`, `docs/decisions/`, `docs/follow-ups/`에 다음 작업에서도 재사용할 지식과 후속 항목을 남깁니다. Git 작업은 `commit`, `pull`, `push`, `pr`, `merge`가 해당 요청에 맞춰 처리합니다.
+
+## 카메라 라이브 보기 (ViewRTSP)
+
+RTSP 영상은 [go2rtc](https://github.com/AlexxIT/go2rtc)(MIT)가 WebRTC로 바꿔 브라우저에 전달합니다.
+
+1. go2rtc 실행 파일을 `tools/go2rtc/`에 둡니다. (Windows: `go2rtc_win64.zip`의 `go2rtc.exe`)
+2. 실제 카메라: `bun run relay`를 실행하고, 앱의 설정 메뉴에서 카메라 RTSP 주소를 저장합니다. 주소는 `config/relay-state.yaml`에 남아 다음 실행에도 유지됩니다.
+3. 카메라 없이 확인: `tools/arial.ttf`를 두고 `bun run relay:test`를 실행하면 시각이 찍힌 테스트 영상이 나옵니다. 설정 메뉴의 "시험용 영상"에서 시계 영상과 색 막대 영상을 골라 주소 전환을 시험할 수 있습니다.
+4. 다른 터미널에서 `bun dev`를 실행하고 http://localhost:3000 을 엽니다.
+
+환경 변수: `GO2RTC_URL`(기본 `http://127.0.0.1:1984`), `SAVE_DIR`(서버 저장 폴더, 기본 `./saved`).
