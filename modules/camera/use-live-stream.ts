@@ -35,13 +35,15 @@ async function negotiate(pc: RTCPeerConnection) {
 }
 
 // 카메라 라이브 영상을 WebRTC로 받는다. 끊기면 2초 간격으로 다시 연결한다.
-export function useLiveStream() {
+// disabled이면 연결하지 않는다(데모 모드: 영상 파일을 직접 재생하므로 중계 서버가 필요 없다).
+export function useLiveStream(disabled = false) {
   const [status, setStatus] = useState<LiveStatus>("connecting");
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [attempt, setAttempt] = useState(0);
   const reconnect = useCallback(() => setAttempt((n) => n + 1), []);
 
   useEffect(() => {
+    if (disabled) return;
     let cancelled = false;
     let pc: RTCPeerConnection | undefined;
     let retry: ReturnType<typeof setTimeout> | undefined;
@@ -84,7 +86,7 @@ export function useLiveStream() {
       clearTimeout(retry);
       pc?.close();
     };
-  }, [attempt]);
+  }, [attempt, disabled]);
 
-  return { status, stream, reconnect };
+  return { status: disabled ? ("live" as const) : status, stream, reconnect };
 }

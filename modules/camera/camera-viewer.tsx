@@ -6,8 +6,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
 import { CameraSettings } from "./camera-settings";
+import { DEMO_VIDEO_URL } from "@/lib/demo";
+
 import { captureFrame } from "./capture";
 import { saveTargetPreference, standingRecordingPreference } from "./preferences";
+import { recordVideoElement } from "./record-element";
 import { saveBlob, type SaveKind } from "./save";
 import { StreamRecorder } from "./stream-recorder";
 import { useLiveStream } from "./use-live-stream";
@@ -17,7 +20,7 @@ const CLIP_POST_MS = 5000;
 const VIDEO_EXT = "mp4";
 
 type Notice = { tone: "default" | "destructive"; text: string };
-type Recording = { stop(): Blob };
+type Recording = { stop(): Blob | Promise<Blob>; ext: string };
 
 const STATUS_TEXT = {
   connecting: { title: "카메라에 연결하는 중입니다", body: "잠시만 기다려 주세요." },
@@ -27,18 +30,20 @@ const STATUS_TEXT = {
   },
 } as const;
 
-export function CameraViewer() {
-  const { status, stream, reconnect } = useLiveStream();
+export function CameraViewer({ demo = false }: { demo?: boolean }) {
+  const { status, stream, reconnect } = useLiveStream(demo);
   const videoRef = useRef<HTMLVideoElement>(null);
   const recorderRef = useRef<StreamRecorder | null>(null);
   const recordingRef = useRef<Recording | null>(null);
   const standingRef = useRef(true);
 
-  const target = useSyncExternalStore(
+  // 데모에서는 서버 디스크가 없으므로 항상 내 기기에 저장한다.
+  const storedTarget = useSyncExternalStore(
     saveTargetPreference.subscribe,
     saveTargetPreference.get,
     () => saveTargetPreference.fallback,
   );
+  const target = demo ? "device" : storedTarget;
   const standing =
     useSyncExternalStore(
       standingRecordingPreference.subscribe,
@@ -57,8 +62,8 @@ export function CameraViewer() {
   }, [standing]);
 
   useEffect(() => {
-    if (videoRef.current) videoRef.current.srcObject = stream;
-  }, [stream]);
+    if (videoRef.current && !demo) videoRef.current.srcObject = stream;
+  }, [stream, demo]);
 
   useEffect(() => {
     if (!stream) return;
@@ -106,15 +111,24 @@ export function CameraViewer() {
     if (!session) return;
     recordingRef.current = null;
     setRecording(false);
-    await save("video", VIDEO_EXT, session.stop());
+    await save("video", session.ext, await session.stop());
     if (!standingRef.current) recorderRef.current?.stop();
   }, [save]);
 
   const toggleRecording = async () => {
     if (recording) return void stopRecording();
+    setNotice(null);
+    if (demo) {
+      try {
+        recordingRef.current = recordVideoElement(videoRef.current!);
+        setRecording(true);
+      } catch {
+        setNotice({ tone: "destructive", text: "이 브라우저에서는 데모 영상을 녹화할 수 없습니다." });
+      }
+      return;
+    }
     const recorder = recorderRef.current;
     if (!recorder) return;
-    setNotice(null);
     // 상시 녹화가 꺼져 있으면 지금부터 받기 시작하므로, 첫 키프레임을 받을 때까지 기다린다.
     if (!standing) {
       setPreparing(true);
@@ -127,7 +141,7 @@ export function CameraViewer() {
       }
     }
     try {
-      recordingRef.current = recorder.startRecording();
+      recordingRef.current = { ...recorder.startRecording(), ext: VIDEO_EXT };
       setRecording(true);
     } catch {
       notReady();
@@ -156,20 +170,32 @@ export function CameraViewer() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <CameraSettings
-          onSaved={() => {
-            setNotice({ tone: "default", text: "카메라 주소를 저장했습니다. 새 영상으로 다시 연결합니다." });
-            reconnect();
-          }}
-        />
-      </div>
+      {demo ? (
+        <Alert role="status">
+          <AlertTitle>데모 화면입니다</AlertTitle>
+          <AlertDescription>
+            실제 카메라가 아니라 미리 만든 영상을 반복 재생합니다. 이미지 캡처와 녹화는 쓸 수 있고, 카메라 주소 설정,
+            구간 클립, 서버 저장은 쓸 수 없습니다.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <div className="flex justify-end">
+          <CameraSettings
+            onSaved={() => {
+              setNotice({ tone: "default", text: "카메라 주소를 저장했습니다. 새 영상으로 다시 연결합니다." });
+              reconnect();
+            }}
+          />
+        </div>
+      )}
       <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
         <video
           ref={videoRef}
           autoPlay
           muted
           playsInline
+          loop={demo}
+          src={demo ? DEMO_VIDEO_URL : undefined}
           className="size-full object-contain"
           data-testid="live-video"
         />
@@ -198,7 +224,7 @@ export function CameraViewer() {
           size="lg"
           variant="secondary"
           onClick={clip}
-          disabled={!live || clipping || !standing}
+          disabled={demo || !live || clipping || !standing}
         >
           {clipping ? "클립 저장 중" : "구간 클립 (앞뒤 5초)"}
         </Button>
@@ -213,15 +239,18 @@ export function CameraViewer() {
         >
           내 기기
         </Button>
-        <Button
-          variant={target === "server" ? "default" : "outline"}
-          aria-pressed={target === "server"}
-          onClick={() => saveTargetPreference.set("server")}
-        >
-          서버
-        </Button>
+        {!demo && (
+          <Button
+            variant={target === "server" ? "default" : "outline"}
+            aria-pressed={target === "server"}
+            onClick={() => saveTargetPreference.set("server")}
+          >
+            서버
+          </Button>
+        )}
       </div>
 
+      {!demo && (
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="상시 녹화">
         <span className="text-sm text-muted-foreground">상시 녹화</span>
         <Button
@@ -237,6 +266,7 @@ export function CameraViewer() {
           </span>
         )}
       </div>
+      )}
 
       {notice && (
         <Alert variant={notice.tone} role="status" aria-live="polite">

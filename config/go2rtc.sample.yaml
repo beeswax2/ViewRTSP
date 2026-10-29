@@ -1,12 +1,12 @@
 # 시험용 반복 재생 영상. 실제 카메라 relay에 덧붙여 쓴다: `bun run relay:sample`
-# 미리 만든 H.264 mp4(config/test-loop.mp4, 10초)를 다시 인코딩하지 않고(-c copy) 계속 반복해 RTSP로 내보낸다.
+# 미리 만든 H.264 mp4(public/test-loop.mp4, 10초. 데모 모드의 브라우저 재생도 같은 파일을 쓴다)를 다시 인코딩하지 않고(-c copy) 계속 반복해 RTSP로 내보낸다.
 # 필요한 것: PATH에 ffmpeg. 영상을 바꿀 때는 B-프레임 없는 H.264(ffmpeg 옵션 -bf 0)여야 한다.
 # B-프레임이 있으면 WebRTC가 키프레임만 그려 화면이 1fps로 끊긴다.
 #
 # 영상을 다시 만드는 명령:
 #   ffmpeg -f lavfi -i testsrc2=size=960x540:rate=25:duration=10 -c:v libx264 -profile:v main -bf 0
-#     -crf 30 -g 25 -keyint_min 25 -sc_threshold 0 -pix_fmt yuv420p -movflags +faststart -an config/test-loop.mp4
+#     -crf 30 -g 25 -keyint_min 25 -sc_threshold 0 -pix_fmt yuv420p -movflags +faststart -an public/test-loop.mp4
 # 프로젝트 루트에서 실행해야 mp4 경로가 맞는다.
 # camera 말고 정의한 스트림이라 앱의 설정 메뉴에 "반복 재생 영상"으로 나타난다.
 streams:
-  sample: exec:ffmpeg -hide_banner -loglevel error -re -stream_loop -1 -i config/test-loop.mp4 -c copy -f rtsp {output}
+  sample: exec:ffmpeg -hide_banner -loglevel error -re -stream_loop -1 -i public/test-loop.mp4 -c copy -f rtsp {output}
