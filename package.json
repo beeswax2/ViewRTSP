@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "relay": "tools/go2rtc/go2rtc.exe -c config/relay-state.yaml -c config/go2rtc.yaml",
+    "relay:sample": "tools/go2rtc/go2rtc.exe -c config/relay-state.yaml -c config/go2rtc.yaml -c config/go2rtc.sample.yaml",
     "relay:test": "tools/go2rtc/go2rtc.exe -c config/relay-test-state.yaml -c config/go2rtc.test.yaml",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",

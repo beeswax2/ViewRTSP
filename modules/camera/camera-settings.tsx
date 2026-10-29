@@ -21,7 +21,11 @@ type Props = { onSaved: () => void };
 type Preset = { name: string; url: string };
 
 // 중계 서버에 있는 시험용 영상 이름을 사람이 읽는 이름으로 바꾼다.
-const PRESET_LABELS: Record<string, string> = { clock: "시계 영상", bars: "색 막대 영상" };
+const PRESET_LABELS: Record<string, string> = {
+  clock: "시계 영상",
+  bars: "색 막대 영상",
+  sample: "반복 재생 영상",
+};
 
 // 카메라 RTSP 주소를 바꾸는 설정 메뉴. 저장된 주소는 비밀번호가 가려진 채로 보인다.
 export function CameraSettings({ onSaved }: Props) {
